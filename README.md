@@ -1,0 +1,1 @@
+# angular-inline-svg
