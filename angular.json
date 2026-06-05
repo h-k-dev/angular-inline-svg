@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "cli": {
+    "packageManager": "npm"
+  },
+  "newProjectRoot": "projects",
+  "projects": {
+    "angular-inline-svg": {
+      "projectType": "library",
+      "root": "projects/angular-inline-svg",
+      "sourceRoot": "projects/angular-inline-svg/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/angular-inline-svg/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/angular-inline-svg/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/angular-inline-svg/tsconfig.spec.json"
+          }
+        }
+      }
+    }
+  }
+}
