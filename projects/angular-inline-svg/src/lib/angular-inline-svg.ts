@@ -39,7 +39,11 @@ export function stripHandlers(el: Element) {
   selector: '[inlineSVG]',
   exportAs: 'inlineSvg',
 })
+<<<<<<< HEAD
 export class AngularInlineSvg {
+=======
+export class InlineSvg {
+>>>>>>> main
   #platformId = inject(PLATFORM_ID);
   #el = inject(ElementRef<HTMLElement>);
   #renderer = inject(Renderer2);
