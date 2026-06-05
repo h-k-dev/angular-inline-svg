@@ -1,6 +1,13 @@
 {
   "name": "angular-inline-svg",
-  "version": "0.0.0",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/h-k-dev/angular-inline-svg"
+  },
+  "bugs": {
+    "url": "https://github.com/h-k-dev/angular-inline-svg/issues"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
