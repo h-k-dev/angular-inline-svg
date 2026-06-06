@@ -21,15 +21,6 @@ Built for modern Angular (v21+): standalone, zoneless-friendly, and powered by `
 npm install @h-k-dev/angular-inline-svg
 ```
 
-### Peer dependencies
-
-This library requires Angular **21.2.0 or later**:
-
-```jsonc
-"@angular/common": "^21.2.0",
-"@angular/core": "^21.2.0"
-```
-
 ## Quick start
 
 The directive is standalone &mdash; just import it where you need it.
