@@ -1,4 +1,4 @@
-import { injectUids } from './inline-svg.utils';
+import { injectUids, injectUidsFrom } from './inline-svg.utils';
 import { GRADIENTS, MESSY_GRADIENTS } from '../../assets/uniquifyIds';
 
 describe('uniquifyIds', () => {
