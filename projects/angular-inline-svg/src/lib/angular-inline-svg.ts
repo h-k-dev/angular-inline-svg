@@ -159,6 +159,14 @@ export class AngularInlineSvg {
     try {
       const res = await fetch(url, { signal: abortSignal });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+      const contentType = res.headers.get('content-type');
+      const [fileType] = (contentType ?? '').split(/ ?; ?/);
+
+      if (!['image/svg+xml', 'text/plain'].some((d) => fileType.includes(d))) {
+        throw new Error(`Invalid SVG content type: ${fileType}`);
+      }
+
       return await res.text();
     } catch (err) {
       // Don't cache failures, so a later attempt can retry cleanly.
