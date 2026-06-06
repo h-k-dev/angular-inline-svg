@@ -77,6 +77,9 @@ export class AngularInlineSvg {
    */
   preParse = input<(rawSvg: string) => string>();
 
+  /** Optional callback to run after the SVG has been scrubbed and the attributes have been applied. */
+  afterScrub = input<(svg: SVGElement) => void>();
+
   /**
    * We allow free access to the resource allowing you track and freely modify the state of the resource.
    */
@@ -135,6 +138,7 @@ export class AngularInlineSvg {
     }
 
     this.scrub(svg);
+    this.afterScrub()?.(svg);
     this.applyAttributes(svg);
     this.clearHost();
     this.#renderer.appendChild(this.#el.nativeElement, svg);
