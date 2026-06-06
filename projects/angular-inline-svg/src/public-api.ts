@@ -1,6 +1,5 @@
-/*
- * Public API Surface of angular-inline-svg
- */
+export { injectUids } from './lib/inline-svg.utils';
+
 export { AngularInlineSvg } from './lib/angular-inline-svg';
 export { InlineSvgCache } from './lib/inline-svg.cache';
 export {
