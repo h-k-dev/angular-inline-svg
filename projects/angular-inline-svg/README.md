@@ -1,64 +1,175 @@
-# AngularInlineSvg
+# @h-k-dev/angular-inline-svg
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.0.
+A tiny, **signal-based** Angular directive that fetches an SVG by URL and inlines it directly into the DOM, so you can style and script it with CSS and JavaScript like any other element.
 
-## Code scaffolding
+Built for modern Angular (v21+): standalone, zoneless-friendly, and powered by `resource()`, `input()`, `output()`, and `effect()`.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Features
 
-```bash
-ng generate component component-name
-```
+- **Inline, not `<img>`** &mdash; the SVG lands in the DOM so `currentColor`, CSS, and JS all work.
+- **Reactive** &mdash; built on Angular signals and `resource()`; re-renders automatically when inputs change.
+- **Caching** &mdash; bounded LRU + TTL cache with in-flight request de-duplication.
+- **Fallbacks** &mdash; supply a `fallbackSVG` URL, with a built-in generic placeholder as a last resort.
+- **Attribute manipulation** &mdash; add or strip attributes on the inserted `<svg>` (e.g. `width`, `fill`).
+- **Accessible by default** &mdash; sets `focusable="false"` and `aria-hidden="true"` unless you provide a semantic hint.
+- **SSR-safe** &mdash; bails out cleanly on the server and only touches the DOM in the browser.
+- **Hardened** &mdash; strips `<script>` tags and inline `on*` handlers as defense-in-depth.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the library, run:
+## Installation
 
 ```bash
-ng build angular-inline-svg
+npm install @h-k-dev/angular-inline-svg
 ```
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
+### Peer dependencies
 
-### Publishing the Library
+This library requires Angular **21.2.0 or later**:
 
-Once the project is built, you can publish your library by following these steps:
-
-1. Navigate to the `dist` directory:
-
-   ```bash
-   cd dist/angular-inline-svg
-   ```
-
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
+```jsonc
+"@angular/common": "^21.2.0",
+"@angular/core": "^21.2.0"
 ```
 
-## Running end-to-end tests
+## Quick start
 
-For end-to-end (e2e) testing, run:
+The directive is standalone &mdash; just import it where you need it.
 
-```bash
-ng e2e
+```typescript
+import { Component } from '@angular/core';
+import { AngularInlineSvg } from '@h-k-dev/angular-inline-svg';
+
+@Component({
+  selector: 'app-logo',
+  imports: [AngularInlineSvg],
+  template: `<span [inlineSVG]="'assets/icons/logo.svg'"></span>`,
+})
+export class LogoComponent {}
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+The fetched SVG is appended to the host element, so the markup above renders as:
 
-## Additional Resources
+```html
+<span><svg ...>...</svg></span>
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+## Configuration
+
+Configure the directive once at the application root with `provideInlineSvg()`:
+
+```typescript
+import { ApplicationConfig } from '@angular/core';
+import { provideInlineSvg } from '@h-k-dev/angular-inline-svg';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideInlineSvg({
+      baseUrl: 'assets/icons',
+      cacheMaxEntries: 100,
+      cacheTtlMs: 5 * 60 * 1000, // 5 minutes
+    }),
+  ],
+};
+```
+
+| Option            | Type     | Default       | Description                                                        |
+| ----------------- | -------- | ------------- | ------------------------------------------------------------------ |
+| `baseUrl`         | `string` | `''`          | Prepended to relative URLs when `resolveSVGUrl` is enabled.        |
+| `cacheMaxEntries` | `number` | `100`         | Maximum cached SVGs before least-recently-used eviction.           |
+| `cacheTtlMs`      | `number` | `300000`      | How long (ms) a cached SVG stays fresh before it is refetched.     |
+
+## API
+
+### Inputs
+
+| Input                 | Type                                      | Default | Description                                                                                  |
+| --------------------- | ----------------------------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `inlineSVG`           | `string` (required)                       | &mdash; | URL of the SVG to load and inline.                                                           |
+| `fallbackSVG`         | `string`                                  | &mdash; | URL loaded instead if the main `inlineSVG` request fails.                                     |
+| `resolveSVGUrl`       | `boolean`                                 | `true`  | When `true`, relative URLs are resolved against the configured `baseUrl`.                    |
+| `setSVGAttributes`    | `Record<string, string \| number \| boolean>` | &mdash; | Attributes applied to the root `<svg>` after load (e.g. `{ width: 24, fill: 'red' }`).  |
+| `removeSVGAttributes` | `readonly string[]`                       | &mdash; | Attribute names stripped from the `<svg>` and all descendants after load.                    |
+| `useCache`            | `boolean`                                 | `true`  | When `true`, the SVG is cached and reused for subsequent requests.                           |
+| `preParse`            | `(rawSvg: string) => string`              | &mdash; | Optional hook to transform/sanitize the raw SVG string before parsing (e.g. via DOMPurify).  |
+
+### Outputs
+
+| Output   | Payload      | Description                                                       |
+| -------- | ------------ | ----------------------------------------------------------------- |
+| `loaded` | `SVGElement` | Emits the inserted `<svg>` element once it is in the DOM.         |
+| `failed` | `Error`      | Emits when loading or parsing fails (after any fallback fails).   |
+
+## Usage examples
+
+### Setting and removing attributes
+
+```html
+<span
+  [inlineSVG]="'icon.svg'"
+  [setSVGAttributes]="{ width: 32, height: 32, fill: 'currentColor' }"
+  [removeSVGAttributes]="['width', 'height']"
+></span>
+```
+
+### Fallback and event handling
+
+```html
+<span
+  [inlineSVG]="'maybe-missing.svg'"
+  [fallbackSVG]="'placeholder.svg'"
+  (loaded)="onLoaded($event)"
+  (failed)="onFailed($event)"
+></span>
+```
+
+```typescript
+onLoaded(svg: SVGElement) {
+  console.log('SVG inserted', svg);
+}
+
+onFailed(err: Error) {
+  console.error('SVG failed to load', err);
+}
+```
+
+### Sanitizing untrusted SVGs
+
+For SVGs from untrusted sources, run them through a sanitizer such as
+[DOMPurify](https://github.com/cure53/DOMPurify) using the `preParse` hook:
+
+```typescript
+import DOMPurify from 'dompurify';
+
+protected readonly sanitize = (raw: string): string => DOMPurify.sanitize(raw);
+```
+
+```html
+<span [inlineSVG]="untrustedUrl" [preParse]="sanitize"></span>
+```
+
+## Security
+
+The directive parses markup in a detached element (keeping it out of Angular's
+sanitizer so the `<svg>` survives) and, as defense-in-depth, removes `<script>`
+tags and inline `on*` event handlers. This is **not** a full sanitizer. For
+genuinely untrusted input, always route the SVG through DOMPurify via `preParse`.
+
+## Accessibility
+
+After loading, the directive applies sensible defaults to the root `<svg>`:
+
+- `focusable="false"` &mdash; keeps the SVG out of the tab order.
+- `aria-hidden="true"` &mdash; treats the icon as decorative.
+
+If you provide any of `role`, `aria-label`, `aria-labelledby`, or `aria-hidden`
+via `setSVGAttributes`, the directive leaves it visible to screen readers:
+
+```html
+<span
+  [inlineSVG]="'search.svg'"
+  [setSVGAttributes]="{ role: 'img', 'aria-label': 'Search' }"
+></span>
+```
+
+## License
+
+MIT
