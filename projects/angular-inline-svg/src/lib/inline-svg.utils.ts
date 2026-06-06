@@ -54,12 +54,19 @@ export function injectUids(svg: SVGElement, uid: string) {
   }
 }
 
+export interface InjectUidsFromOptions {
+  svgText: string;
+  hash: string;
+  baseURL: string;
+  [key: string]: any;
+}
+
 /**
  * Rewrites id references inside <style> blocks of an SVG string.
  * Optimized: single-pass combined regex, pre-escaped alternation,
  * fast-path bailouts, no per-id regex compilation.
  */
-export function injectUidsFrom(svgText: string, hash: string, baseURL: string): string {
+export function injectUidsFrom({ svgText, hash, baseURL }: InjectUidsFromOptions): string {
   // --- 1. Collect all IDs from the SVG (one pass) ---
   const idMatches = svgText.matchAll(/\bid=(["'])([^"']+)\1/g);
   const ids = [...new Set([...idMatches].map((m) => m[2]))];

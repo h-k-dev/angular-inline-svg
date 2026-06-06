@@ -16,6 +16,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { InlineSvgCache } from './inline-svg.cache';
 import { INLINE_SVG_CONFIG, isSvgSupported } from './inline-svg.config';
 
+import { InjectUidsFromOptions } from './inline-svg.utils';
+
 type SvgAttributeValue = string | number | boolean;
 
 const GENERIC_FALLBACK_SVG = `
@@ -75,10 +77,13 @@ export class AngularInlineSvg {
   /** * Optional callback to transform or sanitize the raw SVG string before parsing.
    * Useful for running external SVGs through DOMPurify.
    */
-  preParse = input<(rawSvg: string) => string>();
+  preParse = input<(options: InjectUidsFromOptions) => string>();
 
   /** Optional callback to run after the SVG has been scrubbed and the attributes have been applied. */
   afterScrub = input<(svg: SVGElement) => void>();
+
+  /** The hash to use for the SVG. */
+  hash = input('');
 
   /**
    * We allow free access to the resource allowing you track and freely modify the state of the resource.
@@ -129,7 +134,14 @@ export class AngularInlineSvg {
 
     /**  Run the user's custom pre-parse hook if provided. */
     const transformFn = this.preParse();
-    raw = transformFn ? transformFn(raw) : raw;
+
+    if (transformFn) {
+      raw = transformFn({
+        svgText: raw,
+        hash: this.hash() ?? `__${this.#config.uid++}`,
+        baseURL: this.#config.baseUrl ?? '',
+      });
+    }
 
     const svg = this.parse(raw);
     if (!svg) {

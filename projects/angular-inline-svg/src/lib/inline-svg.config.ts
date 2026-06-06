@@ -7,12 +7,15 @@ export interface InlineSvgOptions {
   cacheMaxEntries?: number;
   /** How long (ms) a cached SVG stays fresh before it is refetched. */
   cacheTtlMs?: number;
+  /** The UID to use for the SVG. */
+  uid?: number;
 }
 
 export const DEFAULT_INLINE_SVG_OPTIONS: Required<InlineSvgOptions> = {
   baseUrl: '',
   cacheMaxEntries: 100,
   cacheTtlMs: 5 * 60 * 1000,
+  uid: 0,
 };
 
 export const INLINE_SVG_CONFIG = new InjectionToken<Required<InlineSvgOptions>>(
