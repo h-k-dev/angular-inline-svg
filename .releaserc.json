@@ -7,7 +7,7 @@
       [
         "@semantic-release/exec",
         {
-          "publishCmd": "npm publish dist/angular-inline-svg --registry=https://npm.pkg.github.com --access public"
+          "publishCmd": "npm publish ./dist/angular-inline-svg --registry=https://npm.pkg.github.com --access public"
         }
       ]
     ]
