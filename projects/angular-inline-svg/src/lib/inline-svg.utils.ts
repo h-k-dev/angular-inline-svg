@@ -3,6 +3,8 @@
 /**
  * Rewrites the ids of the SVG element and all its children.
  * This is useful to avoid conflicts with other SVGs that have the same ids.
+ *
+ * @warning This function is not SSR-safe.
  */
 export function injectUids(svg: SVGElement, uid: string) {
   // 1. Find elements with IDs using standard NodeList iteration
