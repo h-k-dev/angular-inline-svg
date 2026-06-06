@@ -1,23 +1,13 @@
 {
-    "branches": [
-      "main",
-      "development",
-      {"name": "beta", "prerelease": true}
-    ],
+    "branches": ["main", {"name": "beta", "prerelease": true}],
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
       "@semantic-release/github",
       [
-        "@semantic-release/npm",
-        {
-          "pkgRoot": "dist/angular-inline-svg"
-        }
-      ],
-      [
         "@semantic-release/exec",
         {
-          "publishCmd": "npm publish dist/angular-inline-svg --registry=https://npm.pkg.github.com"
+          "publishCmd": "npm publish dist/angular-inline-svg --registry=https://npm.pkg.github.com --access public"
         }
       ]
     ]
