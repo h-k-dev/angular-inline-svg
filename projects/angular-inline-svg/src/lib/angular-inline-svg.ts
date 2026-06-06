@@ -158,20 +158,20 @@ export class AngularInlineSvg {
   });
 
   async #load(url: string, abortSignal: AbortSignal): Promise<string> {
-    if (!this.useCache()) return this.#fetch(url, abortSignal);
+    if (!this.useCache()) return this.#request(url, abortSignal);
 
     /** Return the in-flight/cached request if we already have one */
     const cached = this.#cache.get(url);
     if (cached) return cached;
 
     /** Cache the promise synchronously so concurrent callers dedupe onto it */
-    const request = this.#fetch(url, abortSignal);
+    const request = this.#request(url, abortSignal);
     this.#cache.set(url, request);
 
     return request;
   }
 
-  async #fetch(url: string, abortSignal: AbortSignal): Promise<string> {
+  async #request(url: string, abortSignal: AbortSignal): Promise<string> {
     try {
       const res = await fetch(url, { signal: abortSignal });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
