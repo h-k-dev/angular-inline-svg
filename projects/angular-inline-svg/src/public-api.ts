@@ -1,4 +1,4 @@
-export { injectUids } from './lib/inline-svg.utils';
+export { injectUids, injectUidsFrom, type InjectUidsFromOptions } from './lib/inline-svg.utils';
 
 export { AngularInlineSvg } from './lib/angular-inline-svg';
 export { InlineSvgCache } from './lib/inline-svg.cache';
