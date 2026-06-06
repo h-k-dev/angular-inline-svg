@@ -19,6 +19,11 @@ jobs:
 
       - run: npm ci
       
+      # Runs your test suite in headless mode first
+      - name: Run tests
+        run: npm run test:ci
+
+      # This will only run if your tests pass successfully!
       - name: Build library
         run: npm run build angular-inline-svg
 
