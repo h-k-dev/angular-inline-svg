@@ -13,6 +13,12 @@
         {
           "pkgRoot": "dist/angular-inline-svg"
         }
+      ],
+      [
+        "@semantic-release/exec",
+        {
+          "publishCmd": "npm publish dist/angular-inline-svg --registry=https://npm.pkg.github.com"
+        }
       ]
     ]
   }

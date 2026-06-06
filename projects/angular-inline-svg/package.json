@@ -1,7 +1,7 @@
 {
   "name": "@h-k-dev/angular-inline-svg",
   "version": "0.0.3",
-  "description": "A tiny, signal-based Angular directive for inlining SVGs into the DOM, with caching, fallbacks, attribute manipulation, and accessibility defaults.",
+  "description": "A lightweight, signal-based Angular directive for inlining SVGs into the DOM, with caching, fallbacks, attribute manipulation, and accessibility defaults.",
   "keywords": [
     "angular",
     "svg",
