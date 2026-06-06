@@ -6,7 +6,8 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "test:ci": "ng test angular-inline-svg --watch=false --no-progress --browsers=ChromeHeadless"
   },
   "packageManager": "npm@11.13.0",
   "dependencies": {

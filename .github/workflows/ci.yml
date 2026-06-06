@@ -30,7 +30,7 @@ jobs:
 
   release:
     needs: build
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'beta')
     runs-on: ubuntu-latest
     permissions:
       contents: write 
