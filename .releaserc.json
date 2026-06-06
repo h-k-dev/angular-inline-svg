@@ -11,6 +11,12 @@
           "npmPublish": true,
           "provenance": true
         }
+      ],
+      [
+        "@semantic-release/exec",
+        {
+          "publishCmd": "bash ./scripts/publish-github-packages.sh ${nextRelease.version} ${nextRelease.channel}"
+        }
       ]
     ]
   }
