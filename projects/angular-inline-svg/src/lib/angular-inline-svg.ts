@@ -139,7 +139,7 @@ export class AngularInlineSvg {
       raw = transformFn({
         svgText: raw,
         hash: this.hash() ?? `__${this.#config.uid++}`,
-        baseURL: this.#config.baseUrl ?? '',
+        baseURL: this.hash() || `__${this.#config.uid++}`,
       });
     }
 
