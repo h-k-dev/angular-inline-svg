@@ -52,21 +52,18 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-          registry-url: 'https://registry.npmjs.org'
+
+      # Ensure npm >= 11.5.1, required for OIDC Trusted Publishing.
+      - name: Update npm
+        run: npm install -g npm@latest
 
       - run: npm ci
 
       - name: Build library
         run: npm run build angular-inline-svg
 
-      # Updated Semantic Release Step
+      # Publishes via npm OIDC Trusted Publishing — no NPM_TOKEN required.
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
-        run: |
-          # Authenticate with GitHub Packages for the exec plugin
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_TOKEN }}" >> ~/.npmrc
-
-          # Run Semantic Release
-          npx semantic-release
+        run: npx semantic-release@25

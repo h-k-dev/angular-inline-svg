@@ -7,7 +7,9 @@
       [
         "@semantic-release/npm",
         {
-          "pkgRoot": "./dist/angular-inline-svg"
+          "pkgRoot": "./dist/angular-inline-svg",
+          "npmPublish": true,
+          "provenance": true
         }
       ]
     ]
