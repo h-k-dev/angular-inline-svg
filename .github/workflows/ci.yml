@@ -19,11 +19,11 @@ jobs:
 
       - run: npm ci
       
-      # Runs your test suite in headless mode first
+      # ─── Runs your fast, headless Vitest suite ───
       - name: Run tests
         run: npm run test:ci
 
-      # This will only run if your tests pass successfully!
+      # ─── Only builds if tests pass ───
       - name: Build library
         run: npm run build angular-inline-svg
 
