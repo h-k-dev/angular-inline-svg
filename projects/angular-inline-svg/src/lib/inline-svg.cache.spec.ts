@@ -1,5 +1,4 @@
 import { TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
 
 import { InlineSvgCache } from './inline-svg.cache';
 import { provideInlineSvg } from './inline-svg.config';
