@@ -39,6 +39,13 @@ export class AngularInlineSvg {
 
   #isBrowser = isPlatformBrowser(this.#platformId);
 
+  /**
+   * Stable per-instance id, generated once at construction, used when no
+   * explicit `hash` is supplied. Kept off the reactive render path so we never
+   * mutate shared config while an effect is running.
+   */
+  #uid = `__${this.#config.uid++}`;
+
   /** URL of the SVG to load and inline. */
   inlineSVG = input.required<string>();
 
@@ -108,12 +115,19 @@ export class AngularInlineSvg {
    * Render reactively: re-runs when the markup OR the attribute inputs change.
    */
   #render = effect(() => {
-    let raw = this.res.value();
     const error = this.res.error();
+    let raw = this.res.value();
 
     if (error) {
       this.failed.emit(error);
       raw = GENERIC_FALLBACK_SVG;
+    } else if (!raw && this.useCache()) {
+      /** Synchronous cache hydration: a repeat icon paints immediately from the
+       * already-resolved cache entry instead of flashing empty while the
+       * resource resolves on a microtask.
+       */
+      const url = this.inlineSVG();
+      if (url) raw = this.#cache.getText(this.#resolveUrl(url));
     }
 
     /** The loader only resolves in the browser (it bails on the server), so by
@@ -125,10 +139,11 @@ export class AngularInlineSvg {
     const transformFn = this.preParse();
 
     if (transformFn) {
+      const hash = this.hash() || this.#uid;
       raw = transformFn({
         svgText: raw,
-        hash: this.hash() ?? `__${this.#config.uid++}`,
-        baseURL: this.hash() || `__${this.#config.uid++}`,
+        hash,
+        baseURL: this.#config.baseUrl,
       });
     }
 

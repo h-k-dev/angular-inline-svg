@@ -4,6 +4,8 @@ import { INLINE_SVG_CONFIG } from './inline-svg.config';
 
 interface CacheEntry {
   promise: Promise<string>;
+  /** Resolved markup, populated once the promise settles, enabling synchronous cache hydration. */
+  text?: string;
   expiresAt: number;
 }
 
@@ -48,7 +50,35 @@ export class InlineSvgCache {
       if (oldestKey !== undefined) this.#cache.delete(oldestKey);
     }
 
-    this.#cache.set(url, { promise, expiresAt: Date.now() + this.#ttlMs });
+    const entry: CacheEntry = { promise, expiresAt: Date.now() + this.#ttlMs };
+
+    // Stash the resolved markup so repeat icons can hydrate synchronously
+    // (see getText) instead of flashing empty while the resource resolves.
+    promise.then(
+      (text) => {
+        entry.text = text;
+      },
+      () => {},
+    );
+
+    this.#cache.set(url, entry);
+  }
+
+  /**
+   * Synchronously returns cached markup if a previous request for this URL has
+   * already resolved. Lets callers paint a repeat icon on the first render
+   * without waiting for the async resource pipeline.
+   */
+  getText(url: string): string | undefined {
+    const entry = this.#cache.get(url);
+    if (!entry) return undefined;
+
+    if (Date.now() > entry.expiresAt) {
+      this.#cache.delete(url);
+      return undefined;
+    }
+
+    return entry.text;
   }
 
   delete(url: string): void {
