@@ -16,8 +16,12 @@ export { InlineSvgCache } from './lib/inline-svg.cache';
  */
 export {
   provideInlineSvg,
+  provideInlineSvgFetcher,
+  defaultFetcher,
   INLINE_SVG_CONFIG,
+  INLINE_SVG_FETCHER,
   DEFAULT_INLINE_SVG_OPTIONS,
   isSvgSupported,
   type InlineSvgOptions,
+  type InlineSvgFetcher,
 } from './lib/inline-svg.config';

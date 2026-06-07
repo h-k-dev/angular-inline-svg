@@ -62,11 +62,89 @@ export const appConfig: ApplicationConfig = {
 };
 ```
 
-| Option            | Type     | Default       | Description                                                        |
-| ----------------- | -------- | ------------- | ------------------------------------------------------------------ |
-| `baseUrl`         | `string` | `''`          | Prepended to relative URLs when `resolveSVGUrl` is enabled.        |
-| `cacheMaxEntries` | `number` | `100`         | Maximum cached SVGs before least-recently-used eviction.           |
-| `cacheTtlMs`      | `number` | `300000`      | How long (ms) a cached SVG stays fresh before it is refetched.     |
+| Option            | Type               | Default       | Description                                                                                  |
+| ----------------- | ------------------ | ------------- | -------------------------------------------------------------------------------------------- |
+| `baseUrl`         | `string`           | `''`          | Prepended to relative URLs when `resolveSVGUrl` is enabled.                                  |
+| `cacheMaxEntries` | `number`           | `100`         | Maximum cached SVGs before least-recently-used eviction.                                     |
+| `cacheTtlMs`      | `number`           | `300000`      | How long (ms) a cached SVG stays fresh before it is refetched.                               |
+| `fetcher`         | `InlineSvgFetcher` | native `fetch`| DI-free custom fetcher. For DI-based fetchers (e.g. `HttpClient`), use `provideInlineSvgFetcher`. |
+
+> Custom fetchers are responsible for their own content-type validation. The
+> built-in default rejects responses that aren't `image/svg+xml` or `text/plain`.
+
+## Custom fetcher
+
+By default the directive loads SVGs with the native `fetch` API. You can swap in
+your own transport - to add auth headers, go through an interceptor stack, or use
+a different HTTP client. A fetcher is any promise-based function matching:
+
+```typescript
+type InlineSvgFetcher = (url: string, abortSignal: AbortSignal) => Promise<string>;
+```
+
+Honor the `abortSignal` so in-flight requests are cancelled when the directive is
+destroyed or its URL changes.
+
+### Native fetch with custom headers
+
+For a DI-free fetcher, pass it straight to `provideInlineSvg`:
+
+```typescript
+import { provideInlineSvg } from '@h-k-dev/angular-inline-svg';
+
+provideInlineSvg({
+  fetcher: async (url, signal) => {
+    const res = await fetch(url, {
+      signal,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    return res.text();
+  },
+});
+```
+
+### Axios
+
+Axios supports `AbortSignal` natively via its `signal` option:
+
+```typescript
+import axios from 'axios';
+import { provideInlineSvg } from '@h-k-dev/angular-inline-svg';
+
+provideInlineSvg({
+  fetcher: (url, signal) =>
+    axios.get<string>(url, { signal, responseType: 'text' }).then((res) => res.data),
+});
+```
+
+### Angular HttpClient
+
+`HttpClient` needs dependency injection, so build the fetcher inside an injection
+context with `provideInlineSvgFetcher`. Bridge the `abortSignal` to unsubscription
+so aborts actually cancel the request:
+
+```typescript
+import { inject } from '@angular/core';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
+import { firstValueFrom, fromEvent, takeUntil } from 'rxjs';
+import { provideInlineSvgFetcher } from '@h-k-dev/angular-inline-svg';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(),
+    provideInlineSvgFetcher(() => {
+      const http = inject(HttpClient);
+      return (url, signal) =>
+        firstValueFrom(
+          http
+            .get(url, { responseType: 'text' })
+            .pipe(takeUntil(fromEvent(signal, 'abort'))),
+        );
+    }),
+  ],
+};
+```
 
 ## API
 

@@ -15,7 +15,7 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 
 import { InlineSvgCache } from './inline-svg.cache';
-import { INLINE_SVG_CONFIG, isSvgSupported } from './inline-svg.config';
+import { INLINE_SVG_CONFIG, INLINE_SVG_FETCHER, isSvgSupported } from './inline-svg.config';
 
 import { InjectUidsFromOptions } from './inline-svg.utils';
 
@@ -35,8 +35,13 @@ export class AngularInlineSvg {
   #platformId = inject(PLATFORM_ID);
   #el = inject(ElementRef<HTMLElement>);
   #renderer = inject(Renderer2);
+
+  // Cache for in-memory storage of SVGs.
   #cache = inject(InlineSvgCache);
+
+  // Customizable configuration and fetcher.
   #config = inject(INLINE_SVG_CONFIG);
+  #fetcher = inject(INLINE_SVG_FETCHER);
 
   #isBrowser = isPlatformBrowser(this.#platformId);
 
@@ -120,7 +125,9 @@ export class AngularInlineSvg {
    */
   #scrubbed = computed<{ svg: SVGElement | null; error?: Error }>(() => {
     const error = this.res.error();
-    let raw = this.res.value();
+    // Reading value() while the resource is errored throws, so only read it on
+    // the success path and fall back to the generic placeholder otherwise.
+    let raw = error ? undefined : this.res.value();
 
     if (error) {
       raw = GENERIC_FALLBACK_SVG;
@@ -197,17 +204,8 @@ export class AngularInlineSvg {
 
   async #request(url: string, abortSignal: AbortSignal): Promise<string> {
     try {
-      const res = await fetch(url, { signal: abortSignal });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-      const contentType = res.headers.get('content-type');
-      const [fileType] = (contentType ?? '').split(/ ?; ?/);
-
-      if (!['image/svg+xml', 'text/plain'].some((d) => fileType.includes(d))) {
-        throw new Error(`Invalid SVG content type: ${fileType}`);
-      }
-
-      return await res.text();
+      // Delegate to the configured fetcher (default native fetch or user-provided).
+      return await this.#fetcher(url, abortSignal);
     } catch (err) {
       // Don't cache failures, so a later attempt can retry cleanly.
       this.#cache.delete(url);
