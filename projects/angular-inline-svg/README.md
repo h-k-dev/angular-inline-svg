@@ -4,7 +4,7 @@ A tiny, **signal-based** Angular directive that fetches an SVG by URL and inline
 
 > 💡 **Legacy Browser / Older Angular Support:** This package is heavily optimized for modern, cutting-edge environments. If you need to support legacy browsers or older versions of Angular, please use [ng-inline-svg-2](https://www.npmjs.com/package/ng-inline-svg-2).
 
-My objectives is to stay in the browser - I expose functions from utils and more for you to build your own pipe line on server side.
+My objectives is to stay in the browser. While this package will NEVER adopt SSR support out of the box, I will expose functions for you to build your own pipeline on server side and keep the package as lean as possible at build time. As time goes more injection at configuration level will permit you to implement your own Hydration Strategy that hopefully allows a seemless adoption for SSR implementation.
 
 ## Features
 
