@@ -4,12 +4,6 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     [
-      "@semantic-release/exec",
-      {
-        "prepareCmd": "node scripts/sync-version.mjs ${nextRelease.version}"
-      }
-    ],
-    [
       "@semantic-release/npm",
       {
         "pkgRoot": "./dist/angular-inline-svg",
@@ -23,13 +17,6 @@
         "publishCmd": "bash ./scripts/publish-github-packages.sh ${nextRelease.version} ${nextRelease.channel}"
       }
     ],
-    "@semantic-release/github",
-    [
-      "@semantic-release/git",
-      {
-        "assets": ["package.json", "projects/angular-inline-svg/package.json"],
-        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
-      }
-    ]
+    "@semantic-release/github"
   ]
 }
