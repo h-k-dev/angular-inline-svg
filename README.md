@@ -1,8 +1,10 @@
 # @h-k-dev/angular-inline-svg
 
-A tiny, **signal-based** Angular directive that fetches an SVG by URL and inlines it directly into the DOM, so you can style and script it with CSS and JavaScript like any other element.
+A tiny, **signal-based** Angular directive that fetches an SVG by URL and inlines it directly into the DOM, so you can style and script it with CSS and JavaScript like any other element. Think of this as the modern Angular counterpart to [react-inlinesvg](https://www.npmjs.com/package/react-inlinesvg).
 
-Built for modern Angular (v21+): standalone, zoneless-friendly, and powered by `resource()`, `input()`, `output()`, and `effect()`.
+> 💡 **Legacy Browser / Older Angular Support:** This package is heavily optimized for modern, cutting-edge environments. If you need to support legacy browsers or older versions of Angular, please use [ng-inline-svg-2](https://www.npmjs.com/package/ng-inline-svg-2).
+
+My objectives is to stay in the browser - I expose functions from utils and more for you to build your own pipe line on server side.
 
 ## Features
 
