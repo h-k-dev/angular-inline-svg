@@ -9,6 +9,7 @@ import {
   input,
   output,
   effect,
+  computed,
   resource,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -112,14 +113,16 @@ export class AngularInlineSvg {
   });
 
   /**
-   * Render reactively: re-runs when the markup OR the attribute inputs change.
+   * Pure derivation: turn the loaded markup into a pristine, scrubbed (but
+   * attribute-free) detached `<svg>`. Memoized so it only recomputes when the
+   * source markup, `preParse`, or `hash` change - never on attribute changes.
+   * Side effects (DOM mutation, output emits) belong in `#commit`.
    */
-  #render = effect(() => {
+  #scrubbed = computed<{ svg: SVGElement | null; error?: Error }>(() => {
     const error = this.res.error();
     let raw = this.res.value();
 
     if (error) {
-      this.failed.emit(error);
       raw = GENERIC_FALLBACK_SVG;
     } else if (!raw && this.useCache()) {
       /** Synchronous cache hydration: a repeat icon paints immediately from the
@@ -133,7 +136,7 @@ export class AngularInlineSvg {
     /** The loader only resolves in the browser (it bails on the server), so by
      * the time we have markup we know we can parse/manipulate the DOM.
      */
-    if (!raw) return this.clearHost();
+    if (!raw) return { svg: null, error };
 
     /**  Run the user's custom pre-parse hook if provided. */
     const transformFn = this.preParse();
@@ -149,16 +152,33 @@ export class AngularInlineSvg {
 
     const svg = this.parse(raw);
     if (!svg) {
-      this.failed.emit(new Error('No <svg> element found in loaded contents'));
-      return;
+      return { svg: null, error: error ?? new Error('No <svg> element found in loaded contents') };
     }
 
     scrub(svg);
-    this.afterScrub()?.(svg);
-    this.applyAttributes(svg);
+
+    return { svg, error };
+  });
+
+  /**
+   * Commit to the DOM: re-runs when the scrubbed source OR the attribute inputs
+   * change, but only clones and applies attributes - never re-parses/scrubs.
+   */
+  #render = effect(() => {
+    const { svg, error } = this.#scrubbed();
+
+    if (error) this.failed.emit(error);
+    if (!svg) return this.clearHost();
+
+    const clone = svg.cloneNode(true) as SVGElement;
+
+    this.afterScrub()?.(clone);
+    this.applyAttributes(clone);
+
+    /** Send it */
     this.clearHost();
-    this.#renderer.appendChild(this.#el.nativeElement, svg);
-    this.loaded.emit(svg);
+    this.#renderer.appendChild(this.#el.nativeElement, clone);
+    this.loaded.emit(clone);
   });
 
   async #load(url: string, abortSignal: AbortSignal): Promise<string> {
@@ -220,9 +240,10 @@ export class AngularInlineSvg {
    */
   applyAttributes(svg: SVGElement): void {
     const toSet = this.setSVGAttributes();
+    const toRemove = this.removeSVGAttributes() ?? [];
+
     this.applyA11yDefaults(svg, toSet);
 
-    const toRemove = this.removeSVGAttributes() ?? [];
     if (toRemove.length > 0) {
       // Create an array containing the root SVG + all its descendants
       const allElements = [svg, ...Array.from(svg.querySelectorAll('*'))];
