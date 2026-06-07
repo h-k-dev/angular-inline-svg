@@ -26,17 +26,6 @@ const GENERIC_FALLBACK_SVG = `
   </svg>
 `;
 
-/**
- * Recursively remove all inline event handlers from an element.
- */
-export function stripHandlers(el: Element) {
-  for (const attr of Array.from(el.attributes)) {
-    if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
-  }
-
-  for (const child of Array.from(el.children)) stripHandlers(child);
-}
-
 @Directive({
   selector: '[inlineSVG]',
   exportAs: 'inlineSvg',
@@ -149,7 +138,7 @@ export class AngularInlineSvg {
       return;
     }
 
-    this.scrub(svg);
+    scrub(svg);
     this.afterScrub()?.(svg);
     this.applyAttributes(svg);
     this.clearHost();
@@ -250,20 +239,31 @@ export class AngularInlineSvg {
     if (!labelled) svg.setAttribute('aria-hidden', 'true');
   }
 
-  /**
-   * Defense-in-depth, NOT a full sanitizer: innerHTML on a detached node won't
-   * execute <script>, but inline event handlers fire once it's in the live DOM.
-   * Route genuinely untrusted input through DOMPurify upstream.
-   */
-  scrub(svg: SVGElement): void {
-    for (const script of Array.from(svg.querySelectorAll('script'))) {
-      script.remove();
-    }
-
-    stripHandlers(svg);
-  }
-
   clearHost(): void {
     this.#renderer.setProperty(this.#el.nativeElement, 'innerHTML', '');
   }
+}
+
+/**
+ * Defense-in-depth, NOT a full sanitizer: innerHTML on a detached node won't
+ * execute <script>, but inline event handlers fire once it's in the live DOM.
+ * Route genuinely untrusted input through DOMPurify upstream.
+ */
+export function scrub(svg: SVGElement) {
+  for (const script of Array.from(svg.querySelectorAll('script'))) {
+    script.remove();
+  }
+
+  stripHandlers(svg);
+}
+
+/**
+ * Recursively remove all inline event handlers from an element.
+ */
+export function stripHandlers(el: Element) {
+  for (const attr of Array.from(el.attributes)) {
+    if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
+  }
+
+  for (const child of Array.from(el.children)) stripHandlers(child);
 }

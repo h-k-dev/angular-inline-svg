@@ -7,6 +7,11 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+/**
+ * This Cache only makes sense if you are in the browser.
+ * In an SSR setup you would want to implement a strategy on your own or
+ * cache directly infront of the SSR server.
+ */
 @Injectable({ providedIn: 'root' })
 export class InlineSvgCache {
   #config = inject(INLINE_SVG_CONFIG);
