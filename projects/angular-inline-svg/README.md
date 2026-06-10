@@ -69,6 +69,7 @@ export const appConfig: ApplicationConfig = {
 | `baseUrl`         | `string`           | `''`          | Prepended to relative URLs when `resolveSVGUrl` is enabled.                                  |
 | `cacheMaxEntries` | `number`           | `100`         | Maximum cached SVGs before least-recently-used eviction.                                     |
 | `cacheTtlMs`      | `number`           | `300000`      | How long (ms) a cached SVG stays fresh before it is refetched.                               |
+| `cacheParsedElements` | `boolean`      | `true`        | Also keep one parsed + scrubbed master element per cached URL so repeat icons skip parse/scrub and just clone it. Disable to keep cache entries text-only. |
 | `fetcher`         | `InlineSvgFetcher` | native `fetch`| DI-free custom fetcher. For DI-based fetchers (e.g. `HttpClient`), use `provideInlineSvgFetcher`. |
 
 > Custom fetchers are responsible for their own content-type validation. The

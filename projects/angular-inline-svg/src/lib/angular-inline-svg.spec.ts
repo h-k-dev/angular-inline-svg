@@ -82,6 +82,7 @@ describe('InlineSvg rendering', () => {
 
   it('parses once and reuses the shared master for repeat icons', async () => {
     const parseSpy = vi.spyOn(AngularInlineSvg.prototype, 'parse');
+    parseSpy.mockClear();
 
     fixture.detectChanges();
     await fixture.whenStable();
@@ -119,7 +120,10 @@ describe('InlineSvg rendering', () => {
       providers: [provideInlineSvg({ cacheParsedElements: false })],
     });
 
+    // spyOn returns the already-installed spy when an earlier test spied the
+    // same prototype method, so drop any accumulated calls first.
     const parseSpy = vi.spyOn(AngularInlineSvg.prototype, 'parse');
+    parseSpy.mockClear();
 
     const first = TestBed.createComponent(HostComponent);
     first.componentInstance.url = '0.svg';
@@ -133,8 +137,11 @@ describe('InlineSvg rendering', () => {
     await second.whenStable();
     second.detectChanges();
 
-    // Text/promise caching still applies, but each instance parses its own copy.
-    expect(parseSpy).toHaveBeenCalledTimes(2);
+    // Text/promise caching still applies, but with no shared master each
+    // directive instance parses its own copy (`this` of each parse call is
+    // the directive); with the master enabled only the first instance would.
+    const instancesThatParsed = new Set(parseSpy.mock.contexts);
+    expect(instancesThatParsed.size).toBe(2);
 
     const secondSvg = (
       second.debugElement.query(By.directive(AngularInlineSvg)).nativeElement as HTMLElement
