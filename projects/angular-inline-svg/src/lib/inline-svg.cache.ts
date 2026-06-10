@@ -6,6 +6,13 @@ interface CacheEntry {
   promise: Promise<string>;
   /** Resolved markup, populated once the promise settles, enabling synchronous cache hydration. */
   text?: string;
+  /**
+   * Detached, already parsed + scrubbed master element shared across directive
+   * instances. Consumers must `cloneNode(true)` it and never mutate it.
+   * Only populated for markup that needs no per-instance transform (no
+   * `preParse`), so one master is valid for every instance of the same URL.
+   */
+  element?: SVGElement;
   expiresAt: number;
 }
 
@@ -79,6 +86,33 @@ export class InlineSvgCache {
     }
 
     return entry.text;
+  }
+
+  /**
+   * Synchronously returns the shared parsed + scrubbed master for this URL.
+   * `text` must match the markup the entry resolved to; the check guards
+   * against keying mismatched markup (e.g. fallback content) under this URL.
+   */
+  getElement(url: string, text: string): SVGElement | undefined {
+    const entry = this.#cache.get(url);
+    if (!entry) return undefined;
+
+    if (Date.now() > entry.expiresAt) {
+      this.#cache.delete(url);
+      return undefined;
+    }
+
+    return entry.text === text ? entry.element : undefined;
+  }
+
+  /**
+   * Attaches a parsed + scrubbed master to an existing entry so later
+   * instances of the same URL can skip parse/scrub and just clone. No-ops if
+   * the entry is gone or resolved to different markup than `text`.
+   */
+  setElement(url: string, text: string, element: SVGElement): void {
+    const entry = this.#cache.get(url);
+    if (entry && entry.text === text) entry.element = element;
   }
 
   delete(url: string): void {

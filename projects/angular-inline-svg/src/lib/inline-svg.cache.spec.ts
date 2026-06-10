@@ -98,4 +98,72 @@ describe('InlineSvgCache', () => {
       }
     });
   });
+
+  describe('getElement / setElement (shared scrubbed master)', () => {
+    function makeSvg(): SVGElement {
+      return document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    }
+
+    /** Inserts a settled entry so element attachment has resolved text to match against. */
+    async function settle(url: string, text: string): Promise<void> {
+      const promise = Promise.resolve(text);
+      cache.set(url, promise);
+      await promise;
+      // Flush the cache's own .then() that records the resolved text.
+      await Promise.resolve();
+    }
+
+    it('returns undefined for an unknown url', () => {
+      expect(cache.getElement('missing.svg', '<svg></svg>')).toBeUndefined();
+    });
+
+    it('stores and returns the master for matching markup', async () => {
+      await settle('a.svg', '<svg></svg>');
+
+      const master = makeSvg();
+      cache.setElement('a.svg', '<svg></svg>', master);
+
+      expect(cache.getElement('a.svg', '<svg></svg>')).toBe(master);
+    });
+
+    it('refuses to attach a master when the markup does not match the entry', async () => {
+      await settle('a.svg', '<svg id="a"></svg>');
+
+      cache.setElement('a.svg', '<svg id="other"></svg>', makeSvg());
+
+      expect(cache.getElement('a.svg', '<svg id="a"></svg>')).toBeUndefined();
+      expect(cache.getElement('a.svg', '<svg id="other"></svg>')).toBeUndefined();
+    });
+
+    it('returns undefined when asked for different markup than was attached', async () => {
+      await settle('a.svg', '<svg id="a"></svg>');
+      cache.setElement('a.svg', '<svg id="a"></svg>', makeSvg());
+
+      expect(cache.getElement('a.svg', '<svg id="stale"></svg>')).toBeUndefined();
+    });
+
+    it('evicts and returns undefined once the entry has expired (TTL)', async () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideInlineSvg({ cacheTtlMs: 1000 })],
+      });
+      cache = TestBed.inject(InlineSvgCache);
+
+      vi.useFakeTimers();
+
+      try {
+        await settle('a.svg', '<svg></svg>');
+        cache.setElement('a.svg', '<svg></svg>', makeSvg());
+
+        expect(cache.getElement('a.svg', '<svg></svg>')).toBeDefined();
+
+        vi.advanceTimersByTime(1001);
+
+        expect(cache.getElement('a.svg', '<svg></svg>')).toBeUndefined();
+        expect(cache.get('a.svg')).toBeUndefined();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

@@ -78,4 +78,36 @@ describe('InlineSvg rendering', () => {
     expect(svg!.getAttribute('focusable')).toBe('false');
     expect(svg!.getAttribute('aria-hidden')).toBe('true');
   });
+
+  it('parses once and reuses the shared master for repeat icons', async () => {
+    const parseSpy = vi.spyOn(AngularInlineSvg.prototype, 'parse');
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const second = TestBed.createComponent(HostComponent);
+    second.componentInstance.url = '0.svg';
+    second.detectChanges();
+    await second.whenStable();
+    second.detectChanges();
+
+    // The second instance hydrates from the cached master instead of re-parsing.
+    expect(parseSpy).toHaveBeenCalledTimes(1);
+
+    const firstSvg = (
+      fixture.debugElement.query(By.directive(AngularInlineSvg)).nativeElement as HTMLElement
+    ).querySelector('svg');
+    const secondSvg = (
+      second.debugElement.query(By.directive(AngularInlineSvg)).nativeElement as HTMLElement
+    ).querySelector('svg');
+
+    // Both render full, independent clones - not the same node.
+    expect(firstSvg).toBeTruthy();
+    expect(secondSvg).toBeTruthy();
+    expect(secondSvg).not.toBe(firstSvg);
+    expect(secondSvg!.querySelector('linearGradient#grad')).toBeTruthy();
+    // Per-instance commit work (a11y defaults) still runs on the clone.
+    expect(secondSvg!.getAttribute('aria-hidden')).toBe('true');
+  });
 });

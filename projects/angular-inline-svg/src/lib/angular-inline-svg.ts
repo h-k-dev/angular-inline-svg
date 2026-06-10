@@ -148,6 +148,20 @@ export class AngularInlineSvg {
     /**  Run the user's custom pre-parse hook if provided. */
     const transformFn = this.preParse();
 
+    /** Shared master: when the markup needs no per-instance transform, parse +
+     * scrub happen once per URL and every other instance just clones the cached
+     * master. `preParse` markup is excluded because the hook can rewrite the
+     * text per instance (e.g. uid injection). The master is only ever cloned in
+     * `#render`, never mutated, so sharing it is safe.
+     */
+    const masterKey =
+      !error && !transformFn && this.useCache() ? this.#resolveUrl(this.inlineSVG()) : undefined;
+
+    if (masterKey) {
+      const master = this.#cache.getElement(masterKey, raw);
+      if (master) return { svg: master, error };
+    }
+
     if (transformFn) {
       const hash = this.hash() || this.#uid;
       raw = transformFn({
@@ -163,6 +177,8 @@ export class AngularInlineSvg {
     }
 
     scrub(svg);
+
+    if (masterKey) this.#cache.setElement(masterKey, raw, svg);
 
     return { svg, error };
   });
