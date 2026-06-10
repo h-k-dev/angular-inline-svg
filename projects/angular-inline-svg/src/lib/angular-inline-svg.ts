@@ -208,28 +208,30 @@ export class AngularInlineSvg {
   });
 
   async #load(url: string, abortSignal: AbortSignal): Promise<string> {
-    if (!this.useCache()) return this.#request(url, abortSignal);
+    /** Uncached loads stay tied to the caller's own signal. */
+    if (!this.useCache()) return this.#fetcher(url, abortSignal);
 
     /** Return the in-flight/cached request if we already have one */
     const cached = this.#cache.get(url);
-    if (cached) return cached;
+    if (cached) {
+      this.#cache.subscribe(url, abortSignal);
+      return cached;
+    }
+
+    /** Shared requests get their own controller instead of the caller's signal;
+     * the cache refcounts subscribers and only aborts once every interested
+     * instance has aborted, so one instance's destruction can't kill the fetch
+     * for the others deduped onto it. Failures self-evict in the cache so a
+     * later attempt can retry cleanly.
+     */
+    const controller = new AbortController();
+    const request = this.#fetcher(url, controller.signal);
 
     /** Cache the promise synchronously so concurrent callers dedupe onto it */
-    const request = this.#request(url, abortSignal);
-    this.#cache.set(url, request);
+    this.#cache.set(url, request, controller);
+    this.#cache.subscribe(url, abortSignal);
 
     return request;
-  }
-
-  async #request(url: string, abortSignal: AbortSignal): Promise<string> {
-    try {
-      // Delegate to the configured fetcher (default native fetch or user-provided).
-      return await this.#fetcher(url, abortSignal);
-    } catch (err) {
-      // Don't cache failures, so a later attempt can retry cleanly.
-      this.#cache.delete(url);
-      throw err;
-    }
   }
 
   #resolveUrl(url: string): string {

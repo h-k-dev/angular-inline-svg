@@ -222,4 +222,44 @@ describe('custom fetcher integration', () => {
 
     expect(capturedSignal!.aborted).toBe(true);
   });
+
+  it('keeps the shared request alive when one of two deduped instances is destroyed', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    let resolveFetch!: (text: string) => void;
+    const fetcher = vi.fn<InlineSvgFetcher>((_url, signal) => {
+      capturedSignal = signal;
+      return new Promise<string>((resolve, reject) => {
+        resolveFetch = resolve;
+        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+      });
+    });
+
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [provideInlineSvg({ fetcher })],
+    });
+
+    const first = TestBed.createComponent(HostComponent);
+    first.detectChanges();
+    const second = TestBed.createComponent(HostComponent);
+    second.detectChanges();
+
+    // Let both loaders run; the second dedupes onto the first's request.
+    for (let i = 0; i < 5 && fetcher.mock.calls.length === 0; i++) {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // Destroying one instance must not abort the request the other awaits.
+    first.destroy();
+    expect(capturedSignal!.aborted).toBe(false);
+
+    resolveFetch(SVG_MARKUP);
+    await second.whenStable();
+    second.detectChanges();
+
+    expect(querySvg(second)).toBeTruthy();
+    expect(second.componentInstance.failures).toHaveLength(0);
+  });
 });

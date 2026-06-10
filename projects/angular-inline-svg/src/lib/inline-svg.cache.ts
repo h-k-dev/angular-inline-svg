@@ -14,6 +14,16 @@ interface CacheEntry {
    */
   element?: SVGElement;
   expiresAt: number;
+  /**
+   * Shared-abort bookkeeping while the request is in flight (cleared once it
+   * settles). The controller owns the actual request; `subscribers` counts the
+   * callers still interested in the result.
+   */
+  inflight?: {
+    controller: AbortController;
+    subscribers: number;
+    cleanups: (() => void)[];
+  };
 }
 
 /**
@@ -43,13 +53,20 @@ export class InlineSvgCache {
       return undefined;
     }
 
+    // A shared request that was already aborted can never resolve; report a
+    // miss so the caller starts a fresh one instead of awaiting a doomed promise.
+    if (entry.inflight?.controller.signal.aborted) {
+      this.#cache.delete(url);
+      return undefined;
+    }
+
     // Touch: re-insert to move this key to the most-recently-used end.
     this.#cache.delete(url);
     this.#cache.set(url, entry);
     return entry.promise;
   }
 
-  set(url: string, promise: Promise<string>): void {
+  set(url: string, promise: Promise<string>, controller?: AbortController): void {
     if (this.#cache.has(url)) {
       this.#cache.delete(url);
     } else if (this.#cache.size >= this.#maxEntries) {
@@ -58,17 +75,54 @@ export class InlineSvgCache {
     }
 
     const entry: CacheEntry = { promise, expiresAt: Date.now() + this.#ttlMs };
+    if (controller) entry.inflight = { controller, subscribers: 0, cleanups: [] };
+
+    const settle = () => {
+      entry.inflight?.cleanups.forEach((cleanup) => cleanup());
+      entry.inflight = undefined;
+    };
 
     // Stash the resolved markup so repeat icons can hydrate synchronously
     // (see getText) instead of flashing empty while the resource resolves.
     promise.then(
       (text) => {
         entry.text = text;
+        settle();
       },
-      () => {},
+      () => {
+        settle();
+        // Don't cache failures, so a later attempt can retry cleanly. Identity-
+        // guarded so a late rejection never evicts a newer entry for this URL.
+        if (this.#cache.get(url) === entry) this.#cache.delete(url);
+      },
     );
 
     this.#cache.set(url, entry);
+  }
+
+  /**
+   * Ties a caller's abort signal to the shared in-flight request for `url`.
+   * The request is only aborted once every subscriber has aborted, so one
+   * directive's destruction can't kill the fetch for the others deduped onto
+   * it. No-op once the request has settled (or for entries without a controller).
+   */
+  subscribe(url: string, signal: AbortSignal): void {
+    const inflight = this.#cache.get(url)?.inflight;
+    if (!inflight) return;
+
+    if (signal.aborted) {
+      if (inflight.subscribers === 0) inflight.controller.abort();
+      return;
+    }
+
+    inflight.subscribers++;
+
+    const onAbort = () => {
+      if (--inflight.subscribers === 0) inflight.controller.abort();
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
+    inflight.cleanups.push(() => signal.removeEventListener('abort', onAbort));
   }
 
   /**

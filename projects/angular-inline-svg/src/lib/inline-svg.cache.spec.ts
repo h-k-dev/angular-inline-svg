@@ -99,6 +99,97 @@ describe('InlineSvgCache', () => {
     });
   });
 
+  describe('failure eviction', () => {
+    it('evicts a failed request so a later attempt can retry', async () => {
+      let reject!: (err: Error) => void;
+      const failing = new Promise<string>((_resolve, r) => {
+        reject = r;
+      });
+      cache.set('a.svg', failing);
+
+      reject(new Error('boom'));
+      await failing.catch(() => {});
+      await Promise.resolve();
+
+      expect(cache.get('a.svg')).toBeUndefined();
+    });
+
+    it('does not evict a newer entry when a stale request fails late', async () => {
+      let reject!: (err: Error) => void;
+      const failing = new Promise<string>((_resolve, r) => {
+        reject = r;
+      });
+      cache.set('a.svg', failing);
+
+      // A retry replaces the entry before the old request finally rejects.
+      const replacement = Promise.resolve('<svg></svg>');
+      cache.set('a.svg', replacement);
+
+      reject(new Error('boom'));
+      await failing.catch(() => {});
+      await Promise.resolve();
+
+      expect(cache.get('a.svg')).toBe(replacement);
+    });
+  });
+
+  describe('subscribe (shared abort)', () => {
+    it('aborts the shared request only after every subscriber has aborted', () => {
+      const shared = new AbortController();
+      cache.set('a.svg', new Promise<string>(() => {}), shared);
+
+      const a = new AbortController();
+      const b = new AbortController();
+      cache.subscribe('a.svg', a.signal);
+      cache.subscribe('a.svg', b.signal);
+
+      a.abort();
+      expect(shared.signal.aborted).toBe(false);
+
+      b.abort();
+      expect(shared.signal.aborted).toBe(true);
+    });
+
+    it('aborts immediately when the only subscriber is already aborted', () => {
+      const shared = new AbortController();
+      cache.set('a.svg', new Promise<string>(() => {}), shared);
+
+      const a = new AbortController();
+      a.abort();
+      cache.subscribe('a.svg', a.signal);
+
+      expect(shared.signal.aborted).toBe(true);
+    });
+
+    it('ignores subscriber aborts once the request has settled', async () => {
+      const shared = new AbortController();
+      const promise = Promise.resolve('<svg></svg>');
+      cache.set('a.svg', promise, shared);
+
+      const a = new AbortController();
+      cache.subscribe('a.svg', a.signal);
+
+      await promise;
+      await Promise.resolve();
+
+      a.abort();
+      expect(shared.signal.aborted).toBe(false);
+      expect(cache.getText('a.svg')).toBe('<svg></svg>');
+    });
+
+    it('treats an entry whose shared request was aborted as a miss', () => {
+      const shared = new AbortController();
+      cache.set('a.svg', new Promise<string>(() => {}), shared);
+
+      const a = new AbortController();
+      cache.subscribe('a.svg', a.signal);
+      a.abort();
+
+      // The doomed promise can never resolve; callers must refetch.
+      expect(cache.get('a.svg')).toBeUndefined();
+    });
+  });
+
   describe('getElement / setElement (shared scrubbed master)', () => {
     function makeSvg(): SVGElement {
       return document.createElementNS('http://www.w3.org/2000/svg', 'svg');
