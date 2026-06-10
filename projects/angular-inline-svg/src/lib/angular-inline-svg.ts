@@ -152,10 +152,13 @@ export class AngularInlineSvg {
      * scrub happen once per URL and every other instance just clones the cached
      * master. `preParse` markup is excluded because the hook can rewrite the
      * text per instance (e.g. uid injection). The master is only ever cloned in
-     * `#render`, never mutated, so sharing it is safe.
+     * `#render`, never mutated, so sharing it is safe. Opt out globally via
+     * `provideInlineSvg({ cacheParsedElements: false })`.
      */
     const masterKey =
-      !error && !transformFn && this.useCache() ? this.#resolveUrl(this.inlineSVG()) : undefined;
+      !error && !transformFn && this.useCache() && this.#config.cacheParsedElements
+        ? this.#resolveUrl(this.inlineSVG())
+        : undefined;
 
     if (masterKey) {
       const master = this.#cache.getElement(masterKey, raw);

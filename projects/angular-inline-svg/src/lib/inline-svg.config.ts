@@ -10,6 +10,13 @@ export interface InlineSvgOptions {
   cacheMaxEntries?: number;
   /** How long (ms) a cached SVG stays fresh before it is refetched. */
   cacheTtlMs?: number;
+  /**
+   * When true (default), the cache also keeps one parsed + scrubbed master
+   * element per URL so repeat icons skip parse/scrub and just clone. Disable
+   * to keep cache entries text-only (e.g. many distinct, large SVGs where the
+   * extra DOM weight per entry matters more than repeat-render speed).
+   */
+  cacheParsedElements?: boolean;
   /** The UID to use for the SVG. */
   uid?: number;
   /**
@@ -47,6 +54,7 @@ export const DEFAULT_INLINE_SVG_OPTIONS: StoredInlineSvgOptions = {
   baseUrl: '',
   cacheMaxEntries: 100,
   cacheTtlMs: 5 * 60 * 1000,
+  cacheParsedElements: true,
   uid: 0,
 };
 

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, vi } from 'vitest';
 
 import { GRADIENTS } from '../../assets/uniquifyIds';
 import { AngularInlineSvg } from './angular-inline-svg';
+import { provideInlineSvg } from './inline-svg.config';
 
 @Component({
   imports: [AngularInlineSvg],
@@ -109,5 +110,36 @@ describe('InlineSvg rendering', () => {
     expect(secondSvg!.querySelector('linearGradient#grad')).toBeTruthy();
     // Per-instance commit work (a11y defaults) still runs on the clone.
     expect(secondSvg!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('parses per instance when cacheParsedElements is disabled', async () => {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [provideInlineSvg({ cacheParsedElements: false })],
+    });
+
+    const parseSpy = vi.spyOn(AngularInlineSvg.prototype, 'parse');
+
+    const first = TestBed.createComponent(HostComponent);
+    first.componentInstance.url = '0.svg';
+    first.detectChanges();
+    await first.whenStable();
+    first.detectChanges();
+
+    const second = TestBed.createComponent(HostComponent);
+    second.componentInstance.url = '0.svg';
+    second.detectChanges();
+    await second.whenStable();
+    second.detectChanges();
+
+    // Text/promise caching still applies, but each instance parses its own copy.
+    expect(parseSpy).toHaveBeenCalledTimes(2);
+
+    const secondSvg = (
+      second.debugElement.query(By.directive(AngularInlineSvg)).nativeElement as HTMLElement
+    ).querySelector('svg');
+    expect(secondSvg).toBeTruthy();
+    expect(secondSvg!.querySelector('linearGradient#grad')).toBeTruthy();
   });
 });
